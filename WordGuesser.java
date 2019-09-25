@@ -5,9 +5,9 @@ import java.net.*;
 public class WordGuesser {
 
 
-    public static String[] getWordList() throws Exception {
+    public static String[] getWordList(String urlPath) throws Exception {
 	StringBuilder contentBuilder = new StringBuilder();
-        URL url = new URL("http://app.linkedin-reach.io/words");
+        URL url = new URL(urlPath);
         BufferedReader br = new BufferedReader(
 					       new InputStreamReader(url.openStream()));
 		String sCurrentLine;
@@ -31,9 +31,27 @@ public class WordGuesser {
 	return filteredList;
     }
 
-    private static String getOneWord(List<String> wordList) {
+    private static int uniqueLetters(String word) {
+	HashSet<Character> set = new HashSet<Character>();
+	for (int i = 0; i < word.length(); i++) {
+	    set.add(word.charAt(i));
+	}
+	return set.size();
+    }
+
+    private static String getOneWord(String[] wordList) {
 	Random rand = new Random();
-	String word = wordList.get(rand.nextInt(wordList.size()));
+	boolean found = false;
+	String word = "";
+	while (!found) {
+	    word = wordList[rand.nextInt(wordList.length)];
+	    if (word.length() <= 6) {
+		found = true;
+	    }
+	    else if (uniqueLetters(word) <= 6) {
+		found = true;
+	    }
+	}
 	return word;
     }
 
@@ -68,7 +86,7 @@ public class WordGuesser {
 				    }
 
     public static void playOneGame(String secretWord, int numGuesses) {
-	System.out.println(secretWord);
+
 	int score = 0;
 	HashSet<Character> correctGuesses = new HashSet<Character>();
 	HashSet<Character> incorrectGuesses = new HashSet<Character>();
@@ -110,7 +128,7 @@ public class WordGuesser {
 	    System.out.println("Congratulations, you guessed the secret word!");
 	}
 	else {
-	boolean validAnswer = false;
+	    boolean validAnswer = false;
 	    while (!validAnswer) {
 	    System.out.println("Would you like to reveal the secret word? (y/n");
 	    String input = scanner.nextLine();
@@ -129,25 +147,40 @@ public class WordGuesser {
 	    }
 	    }
         }
+
     }
 
-    private static void welcomeMessage(int numGuesses) {
+    private static String welcomeMessage(int difficulty, int maxLength, int numGuesses) {
+	Scanner scanner = new Scanner(System.in);
 	System.out.println("Welcome to word Guesser!");
 	System.out.println("To win this game, you must correctly guess the word I am thinking of in " + numGuesses + "turns.");
+	System.out.println("Press s to adjust game settings, or press any other key to begin.");
+	String urlPath = String.format("http://app.linkedin-reach.io/words?difficulty=%d&maxLength=%d", difficulty, maxLength);
+	String input = scanner.nextLine();
+	if ((!input.equals("")) && (Character.toLowerCase(input.charAt(0)) == 's')) {
+	    urlPath = adjustSettings(urlPath, difficulty, maxLength);
+	}
+	return urlPath;
     }
+
 
     private static boolean playAgain() {
 	Scanner scanner = new Scanner(System.in);
 	boolean validAnswer = false;
 	while (!validAnswer) {
 	    System.out.println("Would you like to play again? (y/n)");
-	    char answer = Character.toLowerCase(scanner.nextLine().charAt(0));
+	    String input = scanner.nextLine();
+	    if (input.equals("")) {
+		System.out.println("Invalid input.");
+		continue;
+	    }	   
+	    char answer = Character.toLowerCase(input.charAt(0));
 	    if ((answer == 'y') || (answer == 'n')) {
 		validAnswer = true;
 		if (answer == 'y') {
 		    return true;
 		}
-		else if (answer == 'n') {
+		          else if (answer == 'n') {
 		    System.out.println("Goodbye!");
 		    return false;
 		}
@@ -159,12 +192,43 @@ public class WordGuesser {
 	return true;
     }
 
+    private static String adjustSettings(String urlPath, int difficulty, int maxLength) {
+	Scanner scanner = new Scanner(System.in);
+	boolean validAnswer = false;
+	while (!validAnswer) {
+	    System.out.println("Choose  a difficulty level (1-10): ");
+	    int number = scanner.nextInt();
+	    if ((number < 1) || (number > 10)) {
+	        System.out.println("Invalid input.");
+	    }
+	    else {
+	        difficulty = number;
+	        validAnswer = true;
+	    }
+	}
+	validAnswer = false;
+	while (!validAnswer) {
+	    System.out.println("Choose the length for the longest word (1-12): ");
+	    int number = scanner.nextInt();
+	    if ((number < 1) || (number > 12)) {
+	        System.out.println("Invalid input.");
+	    }
+	    else {
+	        maxLength = number;
+	        validAnswer = true;
+	    }
+	}
+	String result = String.format("%s?difficulty=%d&maxLength=%d", urlPath, difficulty, maxLength);
+	return result;
+    }
+
     public static void main(String[] args) throws Exception {
-String[] patterns = getWordList();
-	List<String> wordList = filterPatterns(patterns, 6);
+        String[] wordList = getWordList("http://app.linkedin-reach.io/words?difficluty=1&maxLength=6");
+	int difficulty = 1;
+	int maxLength = 6;
 	int numGuesses = 6;
 	boolean game_on = true;
-	welcomeMessage(numGuesses);
+	String urlPath = welcomeMessage(difficulty, maxLength, numGuesses);
 	while (game_on) {
 	    String secretWord = getOneWord(wordList);
 	    playOneGame(secretWord, numGuesses);
